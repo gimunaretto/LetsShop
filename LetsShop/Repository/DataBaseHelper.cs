@@ -1,4 +1,5 @@
 ﻿using LetsShop.Model;
+using LetsShop.Repository.Model;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -20,6 +21,13 @@ namespace LetsShop.Repository
                 new Produto(){
                      Id = 1,
                       NomeProduto = "Teste",
+                }
+            });
+
+            modelBuilder.Entity<Usuario>().HasData(new Usuario[] {
+                new Usuario(){
+                     Id = 1,
+                      Role = "Cliente",
                 }
             });
         }
