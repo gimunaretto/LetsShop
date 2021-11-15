@@ -13,6 +13,18 @@ namespace LetsShop.Repository
         public static void ModelCreate(this ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Produto>().HasKey(k => k.Id);
+
+            modelBuilder.Entity<Carrinho>()
+             .HasKey(r => new { r.Id, r.CarrinhoId, });
+
+            modelBuilder.Entity<Carrinho>()
+           .HasMany(c => c.CarrinhoItem);
+
+            modelBuilder.Entity<CarrinhoItem>()
+               .HasKey(r => new { r.Id, r.ProdutoId, });
+
+            modelBuilder.Entity<CarrinhoItem>()
+                .HasMany(c => c.Produto);
         }
 
         public static void SeedData(this ModelBuilder modelBuilder)
@@ -20,14 +32,8 @@ namespace LetsShop.Repository
             modelBuilder.Entity<Produto>().HasData(new Produto[] {
                 new Produto(){
                      Id = 1,
-                      NomeProduto = "Teste",
-                }
-            });
-
-            modelBuilder.Entity<Usuario>().HasData(new Usuario[] {
-                new Usuario(){
-                     Id = 1,
-                      Role = "Cliente",
+                     NomeProduto = "Teste",
+                     Preco = 2.50
                 }
             });
         }

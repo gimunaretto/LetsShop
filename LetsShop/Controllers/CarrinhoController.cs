@@ -1,5 +1,11 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using LetsShop.Model;
+using LetsShop.Repository;
+using LetsShop.Repository.Model;
+using LetsShop.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,81 +13,82 @@ using System.Threading.Tasks;
 
 namespace LetsShop.Controllers
 {
+    [Route("api/Produto/{Produtoid}")]
+    [ApiController]
     public class CarrinhoController : Controller
     {
-        // GET: CarrinhoController
-        public ActionResult Index()
+        [HttpGet("CarrinhoItem")]
+        public IActionResult Get([FromRoute] int produtoId, [FromServices] DataBase dataBase)
         {
-            return View();
+            var result = dataBase.CarrinhoItem.Include(x => x.Produto).Where(x => x.ProdutoId == produtoId);
+
+            if (!result.Any())
+                return StatusCode(204, string.Empty);
+
+            return Ok(result);
         }
 
-        // GET: CarrinhoController/Details/5
-        public ActionResult Details(int id)
+        [HttpPost("CarrinhoItem")]
+        public IActionResult Post([FromRoute] int produtoId, [FromBody] CarrinhoItem carrinhoItem, [FromBody] int qtd, [FromServices] DataBase dataBase)
         {
-            return View();
-        }
+            if (!dataBase.Produto.Where(x => x.Id == produtoId).Any())
+                return StatusCode(404, $"Produto id {produtoId} does not exist");
 
-        // GET: CarrinhoController/Create
-        public ActionResult Create()
-        {
-            return View();
-        }
+            if (dataBase.CarrinhoItem.Where(x => x.ProdutoId == produtoId).Any())
+                return StatusCode(404, $"Produto id {produtoId} already exist in the cart");
 
-        // POST: CarrinhoController/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection collection)
-        {
-            try
+            var produto = dataBase.Produto.Where(x => x.Id == produtoId).FirstOrDefault();
+
+            carrinhoItem.ProdutoId = produtoId;
+            carrinhoItem.Produto.Add(produto);
+
+            foreach (var preco in carrinhoItem.Produto)
             {
-                return RedirectToAction(nameof(Index));
+                for (int i = 0; i < qtd; i++)
+                {
+                    carrinhoItem.TotalProduto += preco.Preco;
+                }
             }
-            catch
-            {
-                return View();
-            }
+
+            carrinhoItem.Quantidade = qtd;
+
+            dataBase.CarrinhoItem.Add(carrinhoItem);
+
+            dataBase.SaveChanges();
+
+            return Ok();
         }
 
-        // GET: CarrinhoController/Edit/5
-        public ActionResult Edit(int id)
+        [HttpPatch("{id}")]
+        public IActionResult Patch([FromRoute] int id, [FromBody] CarrinhoItem carrinhoItem, [FromServices] DataBase dataBase)
         {
-            return View();
+            if (carrinhoItem.Quantidade == null)
+                return StatusCode(400, $"Missing Parameter {nameof(carrinhoItem.Quantidade)}");
+
+            var carrinhoItemDb = dataBase.CarrinhoItem.Where(x => x.Id == id).FirstOrDefault();
+
+            if (carrinhoItemDb == null)
+                return StatusCode(404, $"CarrinhoItem id {id} does not exist");
+
+            carrinhoItemDb.Quantidade = carrinhoItem.Quantidade;
+
+            dataBase.Update(carrinhoItemDb);
+
+            dataBase.SaveChanges();
+
+            return Ok();
         }
 
-        // POST: CarrinhoController/Edit/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
+        [HttpDelete("{id}")]
+        public IActionResult Delete([FromRoute] int carrinhoItemid, [FromServices] DataBase dataBase)
         {
-            try
-            {
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
-        }
+            var carrinhoItemRemove = dataBase.CarrinhoItem.Where(x => x.Id == carrinhoItemid);
 
-        // GET: CarrinhoController/Delete/5
-        public ActionResult Delete(int id)
-        {
-            return View();
-        }
+            dataBase.CarrinhoItem.RemoveRange(carrinhoItemRemove);
 
-        // POST: CarrinhoController/Delete/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Delete(int id, IFormCollection collection)
-        {
-            try
-            {
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
+            dataBase.SaveChanges();
+
+            return Ok();
         }
     }
 }

@@ -21,5 +21,7 @@ namespace LetsShop.Repository
         }
 
         public DbSet<Produto> Produto { get; set; }
+        public DbSet<Carrinho> Carrinho { get; set; }
+        public DbSet<CarrinhoItem> CarrinhoItem { get; set; }
     }
 }
