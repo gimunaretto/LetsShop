@@ -35,48 +35,48 @@ namespace LetsShop.Controllers
                 return StatusCode(404, $"Produto id {produtoId} does not exist");
 
             if (dataBase.CarrinhoItem.Where(x => x.ProdutoId == produtoId).Any())
-                return StatusCode(404, $"Produto id {produtoId} already exist in the cart");
-
-            var produto = dataBase.Produto.Where(x => x.Id == produtoId).FirstOrDefault();
-
-            carrinhoItem.ProdutoId = produtoId;
-            carrinhoItem.Produto.Add(produto);
-
-            foreach (var preco in carrinhoItem.Produto)
             {
-                for (int i = 0; i < qtd; i++)
+                var itemCarrinho = dataBase.CarrinhoItem.Where(x => x.ProdutoId == produtoId).FirstOrDefault();
+
+                foreach (var preco in itemCarrinho.Produto)
                 {
-                    carrinhoItem.TotalProduto += preco.Preco;
+                    for (int i = 0; i < qtd; i++)
+                    {
+                        itemCarrinho.TotalProduto += preco.Preco;
+                    }
                 }
+
+                itemCarrinho.Quantidade += qtd;
+
+                dataBase.CarrinhoItem.Update(carrinhoItem);
+
+                dataBase.SaveChanges();
+
+                return Ok();
             }
+            else
+            {
+                var produto = dataBase.Produto.Where(x => x.Id == produtoId).FirstOrDefault();
 
-            carrinhoItem.Quantidade = qtd;
+                carrinhoItem.ProdutoId = produtoId;
+                carrinhoItem.Produto.Add(produto);
 
-            dataBase.CarrinhoItem.Add(carrinhoItem);
+                foreach (var preco in carrinhoItem.Produto)
+                {
+                    for (int i = 0; i < qtd; i++)
+                    {
+                        carrinhoItem.TotalProduto += preco.Preco;
+                    }
+                }
 
-            dataBase.SaveChanges();
+                carrinhoItem.Quantidade = qtd;
 
-            return Ok();
-        }
+                dataBase.CarrinhoItem.Add(carrinhoItem);
 
-        [HttpPatch("{id}")]
-        public IActionResult Patch([FromRoute] int id, [FromBody] CarrinhoItem carrinhoItem, [FromServices] DataBase dataBase)
-        {
-            if (carrinhoItem.Quantidade == null)
-                return StatusCode(400, $"Missing Parameter {nameof(carrinhoItem.Quantidade)}");
+                dataBase.SaveChanges();
 
-            var carrinhoItemDb = dataBase.CarrinhoItem.Where(x => x.Id == id).FirstOrDefault();
-
-            if (carrinhoItemDb == null)
-                return StatusCode(404, $"CarrinhoItem id {id} does not exist");
-
-            carrinhoItemDb.Quantidade = carrinhoItem.Quantidade;
-
-            dataBase.Update(carrinhoItemDb);
-
-            dataBase.SaveChanges();
-
-            return Ok();
+                return Ok();
+            }
         }
 
         [HttpDelete("{id}")]

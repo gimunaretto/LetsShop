@@ -41,7 +41,7 @@ namespace LetsShop.Controllers
         public string Authenticated() => String.Format("Autenticado - {0}", User.Identity.Name);
 
         [HttpGet]
-        [Authorize(Roles = "employee")]
+        [Authorize(Roles = "employee, client")]
         public IActionResult Get([FromServices] DataBase dataBase)
         {
             var result = dataBase.Produto.Include(x => x.NomeProduto).Select(x => x);
