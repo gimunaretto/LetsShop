@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace LetsShop.Controllers
 {
-    [Route("api/Produto/{Produtoid}")]
+    [Route("api/Produto/{ProdutoId}")]
     [ApiController]
     public class CarrinhoController : Controller
     {
@@ -29,7 +29,7 @@ namespace LetsShop.Controllers
         }
 
         [HttpPost("CarrinhoItem")]
-        public IActionResult Post([FromRoute] int produtoId, [FromBody] CarrinhoItem carrinhoItem, [FromBody] int qtd, [FromServices] DataBase dataBase)
+        public IActionResult Post([FromRoute] int produtoId, [FromBody] CarrinhoItem carrinhoItem, [FromServices] DataBase dataBase)
         {
             if (!dataBase.Produto.Where(x => x.Id == produtoId).Any())
                 return StatusCode(404, $"Produto id {produtoId} does not exist");
@@ -40,15 +40,15 @@ namespace LetsShop.Controllers
 
                 foreach (var preco in itemCarrinho.Produto)
                 {
-                    for (int i = 0; i < qtd; i++)
+                    for (int i = 0; i < carrinhoItem.Quantidade; i++)
                     {
                         itemCarrinho.TotalProduto += preco.Preco;
                     }
                 }
 
-                itemCarrinho.Quantidade += qtd;
+                itemCarrinho.Quantidade += carrinhoItem.Quantidade;
 
-                dataBase.CarrinhoItem.Update(carrinhoItem);
+                dataBase.CarrinhoItem.Update(itemCarrinho);
 
                 dataBase.SaveChanges();
 
@@ -63,13 +63,11 @@ namespace LetsShop.Controllers
 
                 foreach (var preco in carrinhoItem.Produto)
                 {
-                    for (int i = 0; i < qtd; i++)
+                    for (int i = 0; i < carrinhoItem.Quantidade; i++)
                     {
                         carrinhoItem.TotalProduto += preco.Preco;
                     }
                 }
-
-                carrinhoItem.Quantidade = qtd;
 
                 dataBase.CarrinhoItem.Add(carrinhoItem);
 
