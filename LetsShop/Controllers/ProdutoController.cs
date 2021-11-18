@@ -16,32 +16,9 @@ namespace LetsShop.Controllers
     [ApiController]
     public class ProdutoController : Controller
     {
-        [HttpPost]
-        [Route("login")]
+        [HttpGet]
+        [Route("listarProdutos")]
         [AllowAnonymous]
-        public async Task<ActionResult<dynamic>> Authenticate([FromBody] Usuario model)
-        {
-            var user = UsuarioRepository.Get(model.Username, model.Password);
-
-            if (user == null)
-                return NotFound(new { message = "Usuário ou senha inválidos" });
-
-            var token = TokenService.GenerateToken(user);
-            user.Password = "";
-            return new
-            {
-                user = user,
-                token = token
-            };
-        }
-
-        [HttpGet]
-        [Route("authenticated")]
-        [Authorize]
-        public string Authenticated() => String.Format("Autenticado - {0}", User.Identity.Name);
-
-        [HttpGet]
-        [Authorize(Roles = "employee, client")]
         public IActionResult Get([FromServices] DataBase dataBase)
         {
             var result = dataBase.Produto.Include(x => x.NomeProduto).Select(x => x);
@@ -53,29 +30,39 @@ namespace LetsShop.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "employee")]
+        [Route("funcionario/criarProduto")]
+        [Authorize(Roles = "funcionario")]
         public IActionResult Post([FromBody] Produto produto, [FromServices] DataBase dataBase)
         {
-            dataBase.Add(produto);
+            var produtoExiste = dataBase.Produto.Where(x => x.NomeProduto == produto.NomeProduto);
+            if (produtoExiste.Any())
+            {
+                return StatusCode(409, "Já existe um produto com esse nome na loja.");
+            }
+            else
+            {
+                dataBase.Add(produto);
+                dataBase.SaveChanges();
 
-            dataBase.SaveChanges();
-
-            return Ok();
+                return Ok();
+            }
         }
 
-        [HttpPatch("{id}")]
-        [Authorize(Roles = "employee")]
+        [HttpPatch]
+        [Route("funcionario/update/{id}")]
+        [Authorize(Roles = "funcionario")]
         public IActionResult Patch([FromRoute] int id, [FromBody] Produto produto, [FromServices] DataBase dataBase)
         {
             if (string.IsNullOrWhiteSpace(produto.NomeProduto))
-                return StatusCode(400, $"Missing Parameter {nameof(produto.NomeProduto)}");
+                return StatusCode(400, $"Parâmetro {nameof(produto.NomeProduto)} não preenchido.");
 
             var produtoDb = dataBase.Produto.Where(x => x.Id == id).FirstOrDefault();
 
             if (produtoDb == null)
-                return StatusCode(404, $"Produto id {id} does not exist");
+                return StatusCode(404, $"Produto não existe.");
 
             produtoDb.NomeProduto = produto.NomeProduto;
+            produtoDb.Preco = produto.Preco;
 
             dataBase.Update(produtoDb);
 
@@ -84,13 +71,61 @@ namespace LetsShop.Controllers
             return Ok();
         }
 
-        [HttpDelete("{id}")]
-        [Authorize(Roles = "employee")]
+        [HttpGet]
+        [Route("{id}")]
+        [AllowAnonymous]
+        public IActionResult GetProductById([FromRoute] int id, [FromServices] DataBase dataBase)
+        {
+            var produtoExiste = dataBase.Produto.Where(x => x.Id == id);
+
+            try
+            {
+                if (produtoExiste.Any())
+                {
+                    return Ok(produtoExiste.FirstOrDefault());
+                }
+                else
+                {
+                    return StatusCode(404, "Produto não existe.");
+                }
+            }
+            catch
+            {
+                return StatusCode(500, "Erro.");
+            }
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult GetProductByName([FromQuery] string nomeProduto, [FromServices] DataBase dataBase)
+        {
+            var produtoExiste = dataBase.Produto.Where(x => x.NomeProduto == nomeProduto);
+
+            try
+            {
+                if (produtoExiste.Any())
+                {
+                    return Ok(produtoExiste.FirstOrDefault());
+                }
+                else
+                {
+                    return StatusCode(404, "Produto não cadastrado.");
+                }
+            }
+            catch
+            {
+                return StatusCode(500, "Erro.");
+            }
+        }
+
+        [HttpDelete]
+        [Route("funcionario/delete/{id}")]
+        [Authorize(Roles = "funcionario")]
         public IActionResult Delete([FromRoute] int id, [FromServices] DataBase dataBase)
         {
-            var peopleToRemove = dataBase.Produto.Where(x => x.Id == id);
+            var productToRemove = dataBase.Produto.Where(x => x.Id == id);
 
-            dataBase.Produto.RemoveRange(peopleToRemove);
+            dataBase.Produto.RemoveRange(productToRemove);
 
             dataBase.SaveChanges();
 

@@ -13,26 +13,30 @@ using System.Threading.Tasks;
 
 namespace LetsShop.Controllers
 {
-    [Route("api/Produto/{ProdutoId}")]
+    [Route("api/[controller]")]
     [ApiController]
     public class CarrinhoController : Controller
     {
-        [HttpGet("CarrinhoItem")]
-        public IActionResult Get([FromRoute] int produtoId, [FromServices] DataBase dataBase)
+        [HttpGet]
+        [Route("produtosCarrinho")]
+        [AllowAnonymous]
+        public IActionResult Get([FromServices] DataBase dataBase)
         {
-            var result = dataBase.CarrinhoItem.Include(x => x.Produto).Where(x => x.ProdutoId == produtoId);
+            var result = dataBase.CarrinhoItem.Include(x => x.Produto).Select(x => x);
 
-            if (!result.Any())
+            if (result.Any())
+                return Ok(result);
+            else
                 return StatusCode(204, string.Empty);
-
-            return Ok(result);
         }
 
-        [HttpPost("CarrinhoItem")]
+        [HttpPost]
+        [Route("adicionarCarrinho")]
+        [AllowAnonymous]
         public IActionResult Post([FromRoute] int produtoId, [FromBody] CarrinhoItem carrinhoItem, [FromServices] DataBase dataBase)
         {
             if (!dataBase.Produto.Where(x => x.Id == produtoId).Any())
-                return StatusCode(404, $"Produto id {produtoId} does not exist");
+                return StatusCode(404, "Produto não existe.");
 
             if (dataBase.CarrinhoItem.Where(x => x.ProdutoId == produtoId).Any())
             {
@@ -48,7 +52,7 @@ namespace LetsShop.Controllers
 
                 itemCarrinho.Quantidade += carrinhoItem.Quantidade;
 
-                dataBase.CarrinhoItem.Update(itemCarrinho);
+                dataBase.CarrinhoItem.UpdateRange(itemCarrinho);
 
                 dataBase.SaveChanges();
 
@@ -70,23 +74,78 @@ namespace LetsShop.Controllers
                 }
 
                 dataBase.CarrinhoItem.Add(carrinhoItem);
-
                 dataBase.SaveChanges();
 
                 return Ok();
             }
         }
 
-        [HttpDelete("{id}")]
-        public IActionResult Delete([FromRoute] int carrinhoItemid, [FromServices] DataBase dataBase)
+        [HttpDelete]
+        [Route("delete/{id}")]
+        [AllowAnonymous]
+        public IActionResult Delete([FromRoute] int id, [FromServices] DataBase dataBase)
         {
-            var carrinhoItemRemove = dataBase.CarrinhoItem.Where(x => x.Id == carrinhoItemid);
+            if (!dataBase.CarrinhoItem.Where(x => x.Id == id).Any())
+                return StatusCode(404, "$Item de id {carrinhoItemId} não existe no carrinho.");
+
+            var carrinhoItemRemove = dataBase.CarrinhoItem.Where(x => x.Id == id);
 
             dataBase.CarrinhoItem.RemoveRange(carrinhoItemRemove);
 
             dataBase.SaveChanges();
 
             return Ok();
+        }
+
+        [HttpDelete]
+        [Route("empty")]
+        [AllowAnonymous]
+        public IActionResult EmptyCart([FromServices] DataBase dataBase)
+        {
+            try
+            {
+                if (dataBase.CarrinhoItem.Any())
+                {
+                    var carrinhoItens = dataBase.CarrinhoItem.Include(x => x.Produto).Select(x => x);
+                    foreach (var item in carrinhoItens)
+                    {
+                        dataBase.CarrinhoItem.RemoveRange(item);
+                        dataBase.SaveChanges();
+                    }
+                    return Ok("Seu carrinho foi esvaziado.");
+                }
+                else
+                {
+                    return Ok("Seu carrinho está vazio.");
+                }
+            }
+            catch
+            {
+                return StatusCode(500, "Erro.");
+            }
+        }
+
+        [HttpGet]
+        [Route("cliente/checkout")]
+        [Authorize(Roles = "cliente")]
+        public IActionResult Checkout([FromServices] DataBase dataBase)
+        {
+            Carrinho checkout = new();
+
+            var carrinhoItens = dataBase.CarrinhoItem.ToList();
+
+            checkout.CarrinhoItem = carrinhoItens;
+
+            double total = 0;
+
+            foreach (var produto in carrinhoItens)
+            {
+                total += produto.TotalProduto;
+            }
+
+            checkout.Total = total;
+
+            return Ok(checkout);
         }
     }
 }
