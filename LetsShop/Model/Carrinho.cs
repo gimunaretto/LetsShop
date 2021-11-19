@@ -9,7 +9,7 @@ namespace LetsShop.Model
     {
         public int Id { get; set; }
         public int CarrinhoId { get; set; }
-        public double Total { get; set; }
+        public double? Total { get; set; }
         public virtual List<CarrinhoItem> CarrinhoItem { get; set; }
     }
 }

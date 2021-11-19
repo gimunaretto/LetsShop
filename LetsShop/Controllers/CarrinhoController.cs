@@ -22,7 +22,7 @@ namespace LetsShop.Controllers
         [AllowAnonymous]
         public IActionResult Get([FromServices] DataBase dataBase)
         {
-            var result = dataBase.CarrinhoItem.Include(x => x.Produto).Select(x => x);
+            var result = dataBase.CarrinhoItem.Where(x => x.Produto != null).ToList();
 
             if (result.Any())
                 return Ok(result);
@@ -88,7 +88,7 @@ namespace LetsShop.Controllers
             if (!dataBase.CarrinhoItem.Where(x => x.Id == id).Any())
                 return StatusCode(404, "$Item de id {carrinhoItemId} não existe no carrinho.");
 
-            var carrinhoItemRemove = dataBase.CarrinhoItem.Where(x => x.Id == id);
+            var carrinhoItemRemove = dataBase.CarrinhoItem.Where(x => x.Id == id).FirstOrDefault();
 
             dataBase.CarrinhoItem.RemoveRange(carrinhoItemRemove);
 
@@ -106,7 +106,7 @@ namespace LetsShop.Controllers
             {
                 if (dataBase.CarrinhoItem.Any())
                 {
-                    var carrinhoItens = dataBase.CarrinhoItem.Include(x => x.Produto).Select(x => x);
+                    var carrinhoItens = dataBase.CarrinhoItem.Where(x => x.Produto != null).ToList();
                     foreach (var item in carrinhoItens)
                     {
                         dataBase.CarrinhoItem.RemoveRange(item);
@@ -136,7 +136,7 @@ namespace LetsShop.Controllers
 
             checkout.CarrinhoItem = carrinhoItens;
 
-            double total = 0;
+            double? total = 0;
 
             foreach (var produto in carrinhoItens)
             {

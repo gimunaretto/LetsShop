@@ -9,6 +9,6 @@ namespace LetsShop.Model
     {
         public int Id { get; set; }
         public string NomeProduto { get; set; }
-        public double Preco { get; set; }
+        public double? Preco { get; set; }
     }
 }

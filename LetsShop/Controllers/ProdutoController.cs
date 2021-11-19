@@ -21,7 +21,7 @@ namespace LetsShop.Controllers
         [AllowAnonymous]
         public IActionResult Get([FromServices] DataBase dataBase)
         {
-            var result = dataBase.Produto.Include(x => x.NomeProduto).Select(x => x);
+            var result = dataBase.Produto.Where(x => x.NomeProduto != null).ToList();
 
             if (result.Any())
                 return Ok(result);
@@ -34,7 +34,7 @@ namespace LetsShop.Controllers
         [Authorize(Roles = "funcionario")]
         public IActionResult Post([FromBody] Produto produto, [FromServices] DataBase dataBase)
         {
-            var produtoExiste = dataBase.Produto.Where(x => x.NomeProduto == produto.NomeProduto);
+            var produtoExiste = dataBase.Produto.Where(x => x.NomeProduto == produto.NomeProduto).ToList();
             if (produtoExiste.Any())
             {
                 return StatusCode(409, "Já existe um produto com esse nome na loja.");
@@ -44,7 +44,7 @@ namespace LetsShop.Controllers
                 dataBase.Add(produto);
                 dataBase.SaveChanges();
 
-                return Ok();
+                return StatusCode(201, "Produto cadastrado com sucesso!");
             }
         }
 
@@ -53,30 +53,35 @@ namespace LetsShop.Controllers
         [Authorize(Roles = "funcionario")]
         public IActionResult Patch([FromRoute] int id, [FromBody] Produto produto, [FromServices] DataBase dataBase)
         {
-            if (string.IsNullOrWhiteSpace(produto.NomeProduto))
-                return StatusCode(400, $"Parâmetro {nameof(produto.NomeProduto)} não preenchido.");
 
             var produtoDb = dataBase.Produto.Where(x => x.Id == id).FirstOrDefault();
 
             if (produtoDb == null)
                 return StatusCode(404, $"Produto não existe.");
 
-            produtoDb.NomeProduto = produto.NomeProduto;
-            produtoDb.Preco = produto.Preco;
+            if(produto.NomeProduto != null)
+            {
+                produtoDb.NomeProduto = produto.NomeProduto;
+            }
+
+            if (produto.Preco != null)
+            {
+                produtoDb.Preco = produto.Preco;
+            }
 
             dataBase.Update(produtoDb);
 
             dataBase.SaveChanges();
 
-            return Ok();
+            return StatusCode(200, "Produto atualizado com sucesso!");
         }
 
         [HttpGet]
-        [Route("{id}")]
+        [Route("funcionario/delete/{id}")]
         [AllowAnonymous]
         public IActionResult GetProductById([FromRoute] int id, [FromServices] DataBase dataBase)
         {
-            var produtoExiste = dataBase.Produto.Where(x => x.Id == id);
+            var produtoExiste = dataBase.Produto.Where(x => x.Id == id).ToList();
 
             try
             {
@@ -99,7 +104,10 @@ namespace LetsShop.Controllers
         [AllowAnonymous]
         public IActionResult GetProductByName([FromQuery] string nomeProduto, [FromServices] DataBase dataBase)
         {
-            var produtoExiste = dataBase.Produto.Where(x => x.NomeProduto == nomeProduto);
+            if (string.IsNullOrWhiteSpace(nomeProduto))
+                return StatusCode(400, $"Parâmetro nome não preenchido.");
+
+            var produtoExiste = dataBase.Produto.Where(x => x.NomeProduto == nomeProduto).ToList();
 
             try
             {
@@ -123,7 +131,7 @@ namespace LetsShop.Controllers
         [Authorize(Roles = "funcionario")]
         public IActionResult Delete([FromRoute] int id, [FromServices] DataBase dataBase)
         {
-            var productToRemove = dataBase.Produto.Where(x => x.Id == id);
+            var productToRemove = dataBase.Produto.Where(x => x.Id == id).FirstOrDefault();
 
             dataBase.Produto.RemoveRange(productToRemove);
 
