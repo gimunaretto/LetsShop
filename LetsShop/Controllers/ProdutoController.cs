@@ -57,7 +57,7 @@ namespace LetsShop.Controllers
             var produtoDb = dataBase.Produto.Where(x => x.Id == id).FirstOrDefault();
 
             if (produtoDb == null)
-                return StatusCode(404, $"Produto não existe.");
+                return StatusCode(404, "Produto não existe.");
 
             if(produto.NomeProduto != null)
             {
@@ -105,7 +105,7 @@ namespace LetsShop.Controllers
         public IActionResult GetProductByName([FromQuery] string nomeProduto, [FromServices] DataBase dataBase)
         {
             if (string.IsNullOrWhiteSpace(nomeProduto))
-                return StatusCode(400, $"Parâmetro nome não preenchido.");
+                return StatusCode(400, "Parâmetro nome não preenchido.");
 
             var produtoExiste = dataBase.Produto.Where(x => x.NomeProduto == nomeProduto).ToList();
 

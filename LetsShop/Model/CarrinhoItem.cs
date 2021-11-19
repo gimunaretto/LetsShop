@@ -11,6 +11,6 @@ namespace LetsShop.Model
         public int ProdutoId { get; set; }
         public int Quantidade { get; set; }
         public double? TotalProduto { get; set; }
-        public virtual ICollection<Produto> Produto { get; set; }
+        public virtual Produto Produto { get; set; }
     }
 }

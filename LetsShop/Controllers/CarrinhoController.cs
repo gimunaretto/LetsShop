@@ -24,6 +24,11 @@ namespace LetsShop.Controllers
         {
             var result = dataBase.CarrinhoItem.Where(x => x.Produto != null).ToList();
 
+            foreach(var item in result)
+            {
+                item.Produto = dataBase.Produto.Where(x => x.Id == item.ProdutoId).FirstOrDefault();
+            }
+
             if (result.Any())
                 return Ok(result);
             else
@@ -31,26 +36,28 @@ namespace LetsShop.Controllers
         }
 
         [HttpPost]
-        [Route("adicionarCarrinho")]
+        [Route("adicionarCarrinho/{id}")]
         [AllowAnonymous]
-        public IActionResult Post([FromRoute] int produtoId, [FromBody] CarrinhoItem carrinhoItem, [FromServices] DataBase dataBase)
+        public IActionResult Post([FromRoute] int id, [FromBody] CarrinhoItem carrinhoItem, [FromServices] DataBase dataBase)
         {
-            if (!dataBase.Produto.Where(x => x.Id == produtoId).Any())
-                return StatusCode(404, "Produto não existe.");
+            if (!dataBase.Produto.Where(x => x.Id == id).Any())
+                return StatusCode(404, "Produto não existe.");       
 
-            if (dataBase.CarrinhoItem.Where(x => x.ProdutoId == produtoId).Any())
+            var produto = dataBase.Produto.Where(x => x.Id == id).FirstOrDefault();
+            var idCarrinho = dataBase.CarrinhoItem.Where(x => x.Id == carrinhoItem.Id).FirstOrDefault();
+
+            if (dataBase.CarrinhoItem.Where(x => x.ProdutoId == id).Any())
             {
-                var itemCarrinho = dataBase.CarrinhoItem.Where(x => x.ProdutoId == produtoId).FirstOrDefault();
+                var itemCarrinho = dataBase.CarrinhoItem.Where(x => x.ProdutoId == id).FirstOrDefault();
 
-                foreach (var preco in itemCarrinho.Produto)
+                for (int i = 0; i < carrinhoItem.Quantidade; i++)
                 {
-                    for (int i = 0; i < carrinhoItem.Quantidade; i++)
-                    {
-                        itemCarrinho.TotalProduto += preco.Preco;
-                    }
+                    itemCarrinho.TotalProduto += produto.Preco;
                 }
 
                 itemCarrinho.Quantidade += carrinhoItem.Quantidade;
+
+                itemCarrinho.Produto = produto;
 
                 dataBase.CarrinhoItem.UpdateRange(itemCarrinho);
 
@@ -60,18 +67,21 @@ namespace LetsShop.Controllers
             }
             else
             {
-                var produto = dataBase.Produto.Where(x => x.Id == produtoId).FirstOrDefault();
+                carrinhoItem.ProdutoId = id;
+                carrinhoItem.Produto = produto;
+                double? total = 0.0;
 
-                carrinhoItem.ProdutoId = produtoId;
-                carrinhoItem.Produto.Add(produto);
-
-                foreach (var preco in carrinhoItem.Produto)
+                if (idCarrinho != null)
                 {
-                    for (int i = 0; i < carrinhoItem.Quantidade; i++)
-                    {
-                        carrinhoItem.TotalProduto += preco.Preco;
-                    }
+                    carrinhoItem.Id++;
                 }
+
+                for (int i = 0; i < carrinhoItem.Quantidade; i++)
+                {
+                    total += produto.Preco;
+                }
+
+                carrinhoItem.TotalProduto = total;
 
                 dataBase.CarrinhoItem.Add(carrinhoItem);
                 dataBase.SaveChanges();
@@ -86,7 +96,7 @@ namespace LetsShop.Controllers
         public IActionResult Delete([FromRoute] int id, [FromServices] DataBase dataBase)
         {
             if (!dataBase.CarrinhoItem.Where(x => x.Id == id).Any())
-                return StatusCode(404, "$Item de id {carrinhoItemId} não existe no carrinho.");
+                return StatusCode(404, $"Item de id {id} não existe no carrinho.");
 
             var carrinhoItemRemove = dataBase.CarrinhoItem.Where(x => x.Id == id).FirstOrDefault();
 
@@ -135,6 +145,11 @@ namespace LetsShop.Controllers
             var carrinhoItens = dataBase.CarrinhoItem.ToList();
 
             checkout.CarrinhoItem = carrinhoItens;
+
+            foreach (var item in checkout.CarrinhoItem)
+            {
+                item.Produto = dataBase.Produto.Where(x => x.Id == item.ProdutoId).FirstOrDefault();
+            }
 
             double? total = 0;
 

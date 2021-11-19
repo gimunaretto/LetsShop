@@ -15,7 +15,7 @@ namespace LetsShop.Repository
             modelBuilder.Entity<Produto>().HasKey(k => k.Id);
 
             modelBuilder.Entity<Carrinho>()
-             .HasKey(r => new { r.Id, r.CarrinhoId, });
+             .HasKey(r => new { r.Id });
 
             modelBuilder.Entity<Carrinho>()
            .HasMany(c => c.CarrinhoItem);
@@ -23,8 +23,6 @@ namespace LetsShop.Repository
             modelBuilder.Entity<CarrinhoItem>()
                .HasKey(r => new { r.Id, r.ProdutoId, });
 
-            modelBuilder.Entity<CarrinhoItem>()
-                .HasMany(c => c.Produto);
         }
 
         public static void SeedData(this ModelBuilder modelBuilder)
